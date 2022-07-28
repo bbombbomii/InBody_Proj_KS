@@ -188,5 +188,3 @@ def vis(model, loader):
             break
 
 vis(cnn_model.cpu(), trainloader)
-
-##수정
