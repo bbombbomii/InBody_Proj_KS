@@ -23,6 +23,8 @@ import numpy as np
 arr = sio.loadmat('test_traindata.mat')
 train_data = arr['I']
 train_labels = arr['label']
+
+arr = sio.loadmat('test_testdata.mat')
 test_data = arr['I']
 test_labels = arr['label']
 
