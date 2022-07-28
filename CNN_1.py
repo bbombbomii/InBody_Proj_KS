@@ -20,7 +20,7 @@ import numpy as np
 
 
 ################### Data loading
-arr = sio.loadmat('traindata.mat')
+arr = sio.loadmat('test_traindata.mat')
 train_data = arr['I']
 train_labels = arr['label']
 test_data = arr['I']
