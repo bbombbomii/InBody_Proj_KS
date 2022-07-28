@@ -188,3 +188,4 @@ def vis(model, loader):
             break
 
 vis(cnn_model.cpu(), trainloader)
+##need to change some settings regarding visualization
