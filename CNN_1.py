@@ -1,4 +1,5 @@
 # CNN code from EE488 [Week10]
+# freshman이 수정함.
 import torch
 import torch.nn as nn
 import torch.optim as optim
