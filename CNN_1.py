@@ -193,7 +193,11 @@ def vis(model, loader):
             break
 
 vis(cnn_model.cpu(), trainloader)
+<<<<<<< HEAD
 ##need to change some settings regarding visualization
 
 
 ## 근데 내가 뭘 더 더했어 아직 올리진않았지
+=======
+##need to change some settings regarding visualization
+>>>>>>> 829b6fb581d9511402e4c57e54f10296966a42aa
