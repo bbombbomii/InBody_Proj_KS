@@ -1,26 +1,31 @@
 # CNN code from EE488 [Week10]
+# freshman이 수정함.
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn.functional as F
+import os
+import mat73
 # from torchsummary import summary
 from tqdm import tqdm
 # from sklearn.preprocessing import StandardScaler
 import time
 import matplotlib.pyplot as plt
 
-import scipy.io as sio
+import scipy.io as sio 
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
-
 # Convolutional layer can be defined by torch.nn.Conv2d
 # CNN needs number of input channel / number of output channel / size of kernel
 
 
 ################### Data loading
-arr = sio.loadmat('test_traindata.mat')
+path = "D:\Cloud\OneDrive - kaist.ac.kr\InBody_Project\임상데이터\3. KAIST Korotkoff Sound\4. Dataset"
+os.chdir(path)
+
+arr = mat73.loadmat('test_traindata.mat')
 train_data = arr['I']
 train_labels = arr['label']
 
@@ -188,3 +193,7 @@ def vis(model, loader):
             break
 
 vis(cnn_model.cpu(), trainloader)
+##need to change some settings regarding visualization
+
+
+## 근데 내가 뭘 더 더했어 아직 올리진않았지
