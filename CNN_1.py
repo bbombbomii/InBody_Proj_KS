@@ -119,10 +119,11 @@ def evaluate(model, loader, device="cpu"):
             images, labels = data
             images = images.to(device)
             labels = labels.to(device)
+            print(labels)
             outputs = model(images)
             # print(outputs)
-            # _, predicted = torch.max(outputs.data, 1) #dimension=1 
-            predicted = outputs.data
+            # _, predicted = torch.max(outputs.data, 1) #dimension=1, 최대값의 class index를 return -> 0 return
+            predicted = np.reshape(outputs.data,(1))
             print(predicted)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
