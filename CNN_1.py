@@ -6,6 +6,8 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn.functional as F
+import os
+import mat73
 # from torchsummary import summary
 from tqdm import tqdm
 # from sklearn.preprocessing import StandardScaler
@@ -15,19 +17,22 @@ import matplotlib.pyplot as plt
 import scipy.io as sio
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
-
 # Convolutional layer can be defined by torch.nn.Conv2d
 # CNN needs number of input channel / number of output channel / size of kernel
 
 
 ################### Data loading
-arr = sio.loadmat('test_traindata.mat')
-train_data = arr['I']
-train_labels = arr['label']
+path = r"C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\4. Dataset"
+os.chdir(path)
 
-arr = sio.loadmat('test_testdata.mat')
-test_data = arr['I']
-test_labels = arr['label']
+arr = mat73.loadmat('trainset_valid_v2.mat')
+train_data = arr['img_tot']
+train_labels = arr['label_tot']
+train_labels = np.reshape(train_labels,(1,train_labels.shape[0]))
+arr = mat73.loadmat('testset_valid_v2.mat')
+test_data = arr['img_tot']
+test_labels = arr['label_tot']
+test_labels = np.reshape(test_labels,(1,test_labels.shape[0]))
 
 ################### Dataset
 class MyDataset(Dataset):
@@ -48,7 +53,7 @@ trainset = MyDataset(train_data, train_labels)
 testset = MyDataset(test_data, test_labels)
 
 trainloader = DataLoader(trainset, batch_size=10, shuffle=True)
-testloader = DataLoader(testset, batch_size=10, shuffle=False)
+testloader = DataLoader(testset, batch_size=10, shuffle=False) # change batch size to 1
 
 # Check the format
 # print(trainset[0][0].size())
@@ -66,9 +71,9 @@ class CNN(nn.Module):
         self.pool2 = nn.AvgPool2d(kernel_size=2, stride=2)
         self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(5,5))
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(in_features=75264, out_features=2)
+        self.fc1 = nn.Linear(in_features=75264, out_features=1) # out features=1 로 수정.
 
-    def forward(self, x):
+    def forward(self, x):   
         batchsize = x.size(0)
         x = self.conv1(x)
         x = self.pool1(F.relu(x))
@@ -108,7 +113,9 @@ def evaluate(model, loader, device="cpu"):
             images = images.to(device)
             labels = labels.to(device)
             outputs = model(images)
+            #print(outputs)
             _, predicted = torch.max(outputs.data, 1)
+            # print(predicted) # predicted 값 확인
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     acc = 100*correct/total
@@ -119,6 +126,7 @@ cnn_model = CNN()
 optimizer = optim.SGD(params = cnn_model.parameters(), lr=0.001, momentum=0.9)
 criterion = nn.CrossEntropyLoss()
 train(model=cnn_model, n_epoch=1, loader=trainloader, optimizer=optimizer, criterion=criterion)
+# skip trian
 acc = evaluate(cnn_model, testloader)
 print('Test accuracy: {:.2f}%'.format(acc))
 
