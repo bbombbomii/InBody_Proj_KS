@@ -26,14 +26,14 @@ path = "D:/Cloud/OneDrive - kaist.ac.kr/InBody_Project/임상데이터/3. KAIST 
 #path = "C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\4. Dataset"
 os.chdir(path)
 
-# arr = mat73.loadmat('trainset_valid.mat')
-arr = mat73.loadmat('trainset_diff_smaller_than_7_v2.mat')
+arr = mat73.loadmat('trainset_valid_v2.mat')
+# arr = mat73.loadmat('trainset_diff_smaller_than_7_v2.mat')
 train_data = arr['img_tot']
 train_labels = arr['label_tot']
 train_labels = np.reshape(train_labels, (1,train_labels.shape[0]))
 
-# arr = mat73.loadmat('testset_valid.mat')
-arr = mat73.loadmat('testset_diff_smaller_than_7_v2.mat')
+arr = mat73.loadmat('testset_valid_v2.mat')
+# arr = mat73.loadmat('testset_diff_smaller_than_7_v2.mat')
 test_data = arr['img_tot']
 test_labels = arr['label_tot']
 test_labels = np.reshape(test_labels, (1,test_labels.shape[0]))
@@ -125,7 +125,7 @@ def evaluate(model, loader, device="cpu"):
 
 
 cnn_model = CNN()
-optimizer = optim.SGD(params = cnn_model.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.SGD(params = cnn_model.parameters(), lr=0.002, momentum=0.9)
 criterion = nn.CrossEntropyLoss()
 train(model=cnn_model, n_epoch=10, loader=trainloader, optimizer=optimizer, criterion=criterion)
 acc = evaluate(cnn_model, testloader)
