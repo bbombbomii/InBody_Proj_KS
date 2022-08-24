@@ -22,8 +22,8 @@ import numpy as np
 
 
 ################### Data loading
-path = "D:/Cloud/OneDrive - kaist.ac.kr/InBody_Project/임상데이터/3. KAIST Korotkoff Sound/4. Dataset"
-#path = "C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\4. Dataset"
+# path = "D:/Cloud/OneDrive - kaist.ac.kr/InBody_Project/임상데이터/3. KAIST Korotkoff Sound/4. Dataset"
+path = r"C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\4. Dataset"
 os.chdir(path)
 
 arr = mat73.loadmat('trainset_valid_v2.mat')
@@ -57,7 +57,7 @@ trainset = MyDataset(train_data, train_labels)
 testset = MyDataset(test_data, test_labels)
 
 trainloader = DataLoader(trainset, batch_size=50, shuffle=True)
-testloader = DataLoader(testset, batch_size=50, shuffle=False)
+testloader = DataLoader(testset, batch_size=1, shuffle=False) # batch size 1로 수정.
 
 # Check the format
 # print(trainset[0][0].size())
@@ -75,7 +75,7 @@ class CNN(nn.Module):
         self.pool2 = nn.AvgPool2d(kernel_size=2, stride=2)
         self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(5,5))
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(in_features=75264, out_features=2)
+        self.fc1 = nn.Linear(in_features=75264, out_features=1)
 
     def forward(self, x):
         batchsize = x.size(0)
@@ -98,10 +98,13 @@ def train(model, n_epoch, loader, optimizer, criterion, device="cpu"):
             images = images.to(device)
             labels = labels.to(device)
             optimizer.zero_grad()
-
             outputs = model(images)
-            loss = criterion(input=outputs, target=labels)
+            with torch.no_grad():
+                labels = np.reshape(labels, (labels.shape[0],1)) #input과 target size 맞춰주기
+
+            loss = criterion(input=outputs.to(torch.float32), target=labels.to(torch.float32)) # tensor type float으로 바꿔주기
             loss.backward()
+            
             optimizer.step()
             running_loss += loss.item()
         print('Epoch {}, loss = {:.3f}'.format(epoch, running_loss/len(loader)))
@@ -117,7 +120,10 @@ def evaluate(model, loader, device="cpu"):
             images = images.to(device)
             labels = labels.to(device)
             outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
+            # print(outputs)
+            # _, predicted = torch.max(outputs.data, 1) #dimension=1 
+            predicted = outputs.data
+            print(predicted)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     acc = 100*correct/total
@@ -127,7 +133,8 @@ def evaluate(model, loader, device="cpu"):
 cnn_model = CNN()
 optimizer = optim.SGD(params = cnn_model.parameters(), lr=0.002, momentum=0.9)
 criterion = nn.CrossEntropyLoss()
-train(model=cnn_model, n_epoch=10, loader=trainloader, optimizer=optimizer, criterion=criterion)
+criterion = nn.MSELoss()
+# train(model=cnn_model, n_epoch=1, loader=trainloader, optimizer=optimizer, criterion=criterion) #skip train
 acc = evaluate(cnn_model, testloader)
 print('Test accuracy: {:.2f}%'.format(acc))
 
