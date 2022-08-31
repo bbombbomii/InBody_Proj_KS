@@ -23,16 +23,16 @@ import numpy as np
 
 ################### Data loading
 path = "D:/Cloud/OneDrive - kaist.ac.kr/InBody_Project/임상데이터/3. KAIST Korotkoff Sound/4. Dataset"
-#path = "C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\4. Dataset"
+#path = r"C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\4. Dataset"
 os.chdir(path)
 
-arr = mat73.loadmat('trainset_valid_v2.mat')
+arr = mat73.loadmat('trainset_valid_v3.mat')
 # arr = mat73.loadmat('trainset_diff_smaller_than_7_v2.mat')
 train_data = arr['img_tot']
 train_labels = arr['label_tot']
 train_labels = np.reshape(train_labels, (1,train_labels.shape[0]))
 
-arr = mat73.loadmat('testset_valid_v2.mat')
+arr = mat73.loadmat('testset_valid_v3.mat')
 # arr = mat73.loadmat('testset_diff_smaller_than_7_v2.mat')
 test_data = arr['img_tot']
 test_labels = arr['label_tot']
@@ -57,7 +57,7 @@ trainset = MyDataset(train_data, train_labels)
 testset = MyDataset(test_data, test_labels)
 
 trainloader = DataLoader(trainset, batch_size=50, shuffle=True)
-testloader = DataLoader(testset, batch_size=50, shuffle=False)
+testloader = DataLoader(testset, batch_size=1, shuffle=False) # batch size 1로 수정.
 
 # Check the format
 # print(trainset[0][0].size())
@@ -75,7 +75,7 @@ class CNN(nn.Module):
         self.pool2 = nn.AvgPool2d(kernel_size=2, stride=2)
         self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(5,5))
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(in_features=75264, out_features=2)
+        self.fc1 = nn.Linear(in_features=75264, out_features=1)
 
     def forward(self, x):
         batchsize = x.size(0)
