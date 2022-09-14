@@ -28,20 +28,13 @@ import math
 path = r"C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\4. Dataset"
 os.chdir(path)
 
-arr = mat73.loadmat('trainset_valid_v3.mat')
+arr = mat73.loadmat('trainset_valid_v3.mat') 
 # arr = mat73.loadmat('trainset_diff_smaller_than_7_v2.mat')
 train_data = arr['img_tot']
 train_labels = arr['label_tot']
 train_labels = np.reshape(train_labels, (1,train_labels.shape[0]))
 
-arr = mat73.loadmat('test_26.mat')
-# arr = mat73.loadmat('testset_valid_v3.mat')
-# arr = mat73.loadmat('testset_diff_smaller_than_7_v2.mat')
-test_data = arr['img_tot']
-test_labels = arr['label_tot']
-test_time = arr['time']
-test_pressure = arr['pressure']
-test_labels = np.reshape(test_labels, (1,test_labels.shape[0]))
+
 
 ################### Dataset
 class MyDataset(Dataset):
@@ -59,10 +52,7 @@ class MyDataset(Dataset):
         return self.len
 
 trainset = MyDataset(train_data, train_labels)
-testset = MyDataset(test_data, test_labels)
-
 trainloader = DataLoader(trainset, batch_size=50, shuffle=True)
-testloader = DataLoader(testset, batch_size=1, shuffle=False) # batch size 1로 수정.
 
 # Check the format
 # print(trainset[0][0].size())
@@ -115,7 +105,7 @@ def train(model, n_epoch, loader, optimizer, criterion, device="cpu"):
         print('Epoch {}, loss = {:.3f}'.format(epoch, running_loss/len(loader)))
     print('Training Finished')
     PATH = r"C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\5. Trained Model"
-    torch.save(model, PATH + '/model.pt')  # 전체 모델 저장
+    torch.save(model, PATH + '/model_epoch50.pt')  # 전체 모델 저장
 
 
 def evaluate(model, loader, device="cpu"):
@@ -131,7 +121,10 @@ def evaluate(model, loader, device="cpu"):
             outputs = model(images)
             # _, predicted = torch.max(outputs.data, 1) #dimension=1, 최대값의 class index를 return -> 0 return
             temp = np.reshape(outputs.data,(1))
-            predicted.append(temp.item())
+            if temp.item() >= 1:
+                predicted.append(1) # predicted probability values that exceed 1 are replaced with 1.
+            else:
+                predicted.append(temp.item())
             total += labels.size(0)
             correct += (temp == labels).sum().item()
     acc = 100*correct/total
@@ -139,64 +132,102 @@ def evaluate(model, loader, device="cpu"):
 
 
 cnn_model = CNN()
-optimizer = optim.SGD(params = cnn_model.parameters(), lr=0.002, momentum=0.9) #lr=0.002 -> 0.2 임시로
+optimizer = optim.SGD(params = cnn_model.parameters(), lr=0.002, momentum=0.9) 
 criterion = nn.CrossEntropyLoss()
 criterion = nn.MSELoss()
-# skip train
-# train(model=cnn_model, n_epoch=1, loader=trainloader, optimizer=optimizer, criterion=criterion)
-PATH = r"C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\5. Trained Model"
 
-model = torch.load(PATH + 'model.pt') # string에 '/' 추가하기.
-predicted = evaluate(model, testloader)
-print("predicted: ", predicted)
-############ SBP, DBP Calculation
-t = test_time
-N = len(t)-1
-MSEsbp_reci = []
-MSEdbp_reci = []
-for n in range(5,N-4):
-    # MSE for the SBP
-    tsbp = t[n]
-    tdbp = t[N]
-    sum = 0
-    for n1 in range(-5,4):
-        # calculate y(=label curve)
-        if t[n+n1] < tsbp - 1:
-            y = 0
-        elif tsbp - 1 <= t[n+n1] < tsbp:
-            y = t[n+n1] - tsbp + 1
-        elif tsbp <= t[n+n1] < tdbp - 1:
-            y = 1
-        elif tdbp -1 <= t[n+n1] < tdbp + 1:
-            y = -1/2*t[n+n1] + 1/2*tdbp + 1/2
-        else:
-            y = 0
-        sum = sum + (predicted[n+n1]-float(y))**2
-    MSEsbp_reci.append(1/(sum/10))
-    # MSE for the DBP
-    tsbp = t[1]
-    tdbp = t[n]
-    sum = 0
-    for n1 in range(-5,4):
-        # calculate y(=label curve)
-        if t[n+n1] < tsbp - 1:
-            y = 0
-        elif tsbp - 1 <= t[n+n1] < tsbp:
-            y = t[n+n1] - tsbp + 1
-        elif tsbp <= t[n+n1] < tdbp - 1:
-            y = 1
-        elif tdbp -1 <= t[n+n1] < tdbp + 1:
-            y = -1/2*t[n+n1] + 1/2*tdbp + 1/2
-        else:
-            y = 0
-        sum = sum + (predicted[n+n1]-float(y))**2
-    MSEdbp_reci.append(1/(sum/10))
+########## Training
+# train(model=cnn_model, n_epoch=50, loader=trainloader, optimizer=optimizer, criterion=criterion)
+PATH = r"C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\5. Trained Model\Save"
+model = torch.load(PATH + '/model_epoch50.pt') 
+path = r"C:\Users\Human\kaist.ac.kr\Bomi Lee - InBody_Project\임상데이터\3. KAIST Korotkoff Sound\4. Dataset"
+os.chdir(path)
 
-max_index = MSEsbp_reci.index(max(MSEsbp_reci))
-sbp_predicted = test_pressure[max_index]
-print(sbp_predicted)
-# tsbp_predicted = t[max_index]
-max_index = MSEdbp_reci.index(max(MSEdbp_reci))
-dbp_predicted = test_pressure[max_index]
-print(dbp_predicted)
+def test(index):
+    arr = mat73.loadmat('test_'+str(index)+'.mat')
+    test_data = arr['img_tot']
+    test_labels = arr['label_tot']
+    test_time = arr['time']
+    test_pressure = arr['pressure']
+    sbp_true = arr['sbp']
+    dbp_true = arr['dbp']
+    test_labels = np.reshape(test_labels, (1,test_labels.shape[0]))
+    testset = MyDataset(test_data, test_labels)
+    testloader = DataLoader(testset, batch_size=1, shuffle=False) # batch size 1로 수정.
+    predicted = evaluate(model, testloader)
+
+    ############ SBP, DBP Estimation
+    t = test_time
+    N = len(t)-1
+    MSEsbp_reci = []
+    MSEdbp_reci = []
+    for n in range(5,N-4):
+        # MSE for the SBP
+        tsbp = t[n]
+        tdbp = t[N]
+        sum = 0
+        for n1 in range(-5,4):
+            # calculate y(=label curve)
+            if t[n+n1] < tsbp - 1:
+                y = 0
+            elif tsbp - 1 <= t[n+n1] < tsbp:
+                y = t[n+n1] - tsbp + 1
+            elif tsbp <= t[n+n1] < tdbp - 1:
+                y = 1
+            elif tdbp -1 <= t[n+n1] < tdbp + 1:
+                y = -1/2*t[n+n1] + 1/2*tdbp + 1/2
+            else:
+                y = 0
+            sum = sum + (predicted[n+n1]-float(y))**2
+        MSEsbp_reci.append(1/(sum/10))
+        # MSE for the DBP
+        tsbp = t[1]
+        tdbp = t[n]
+        sum = 0
+        for n1 in range(-5,4):
+            # calculate y(=label curve)
+            if t[n+n1] < tsbp - 1:
+                y = 0
+            elif tsbp - 1 <= t[n+n1] < tsbp:
+                y = t[n+n1] - tsbp + 1
+            elif tsbp <= t[n+n1] < tdbp - 1:
+                y = 1
+            elif tdbp -1 <= t[n+n1] < tdbp + 1:
+                y = -1/2*t[n+n1] + 1/2*tdbp + 1/2
+            else:
+                y = 0
+            sum = sum + (predicted[n+n1]-float(y))**2
+        MSEdbp_reci.append(1/(sum/10))
+    plt.figure()
+    plt.plot(predicted)
+    plt.ylabel('predicted')
+    plt.figure()
+    plt.plot(MSEsbp_reci)
+    plt.ylabel('MSEsbp_reci')
+    plt.figure()
+    plt.plot(MSEdbp_reci)
+    plt.ylabel('MSEdbp_reci')
+    plt.show()
+    max_index = MSEsbp_reci.index(max(MSEsbp_reci))
+    sbp_predicted = test_pressure[max_index]
+    # tsbp_predicted = t[max_index]
+    max_index = MSEdbp_reci.index(max(MSEdbp_reci))
+    dbp_predicted = test_pressure[max_index]
+    sbp_err = sbp_predicted - sbp_true
+    dbp_err = dbp_predicted - dbp_true
     
+    return sbp_err, dbp_err
+
+test_indices = [21,10,50,24,34] # 09-14 PM 01:01
+sbp_mse = 0
+dbp_mse = 0
+for index in test_indices:
+    sbp_err, dbp_err = test(index)
+    print("sbp_err: ", sbp_err)
+    print("dbp_err: ", dbp_err)
+    sbp_mse = sbp_mse + sbp_err**2
+    dbp_mse = dbp_mse + dbp_err**2
+sbp_mse = sbp_mse/len(test_indices)
+dbp_mse = dbp_mse/len(test_indices)
+print("sbp_rmse: ", math.sqrt(sbp_mse))
+print("dbp_rmse: ", math.sqrt(dbp_mse))
