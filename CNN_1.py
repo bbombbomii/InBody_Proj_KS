@@ -100,7 +100,11 @@ def train(model, n_epoch, loader, optimizer, criterion, device="cpu"):
             optimizer.zero_grad()
 
             outputs = model(images)
-            loss = criterion(input=outputs, target=labels)
+            with torch.no_grad():
+                labels = np.reshape(labels, (labels.shape[0],1)) #input과 target size 맞춰주기
+
+            loss = criterion(input=outputs.to(torch.float32), target=labels.to(torch.float32)) # tensor type float으로 바꿔주기    
+            #loss = criterion(input=outputs, target=labels)
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
@@ -116,8 +120,14 @@ def evaluate(model, loader, device="cpu"):
             images, labels = data
             images = images.to(device)
             labels = labels.to(device)
+            print(labels)
             outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
+            # print(outputs)
+            # _, predicted = torch.max(outputs.data, 1) #dimension=1, 최대값의 class index를 return -> 0 return 
+            #_, predicted = torch.max(outputs.data, 1)
+            predicted = np.reshape(outputs.data, (1))
+            print(predicted)
+
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     acc = 100*correct/total
@@ -127,6 +137,7 @@ def evaluate(model, loader, device="cpu"):
 cnn_model = CNN()
 optimizer = optim.SGD(params = cnn_model.parameters(), lr=0.002, momentum=0.9)
 criterion = nn.CrossEntropyLoss()
+criterion = nn.MSELoss()
 train(model=cnn_model, n_epoch=10, loader=trainloader, optimizer=optimizer, criterion=criterion)
 acc = evaluate(cnn_model, testloader)
 print('Test accuracy: {:.2f}%'.format(acc))
