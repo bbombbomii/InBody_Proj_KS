@@ -108,13 +108,13 @@ def train(model, n_epoch, loader, optimizer, criterion, device="cpu"):
     torch.save(model, PATH + '/model_epoch50.pt')  # 전체 모델 저장
 
 
-def evaluate(model, loader, device="cpu"):
+def evaluate(model, loader, device="cpu"): # 여기서 뭔가 문제가 있음. predicted가 계속 축적되는 원인이.
     model.eval()
     total=0
     correct=0
-    pred = []
     with torch.no_grad():
-        for data in loader:
+        pred = []
+        for data in loader: 
             images, labels = data
             images = images.to(device)
             labels = labels.to(device)
@@ -144,27 +144,30 @@ os.chdir(path)
 
 def test(index):
     arr = mat73.loadmat('test_'+str(index)+'.mat')
-    test_data = arr['img_tot']
-    test_labels = arr['label_tot']
+    test_data = arr['img']
+    test_labels = arr['label']
     test_time = arr['time']
     test_pressure = arr['pressure']
     sbp_true = arr['sbp']
     dbp_true = arr['dbp']
+    tsbp_true = arr['t_sbp']
+    tdbp_true = arr['t_dbp']
+    t = test_time
     test_labels = np.reshape(test_labels, (1,test_labels.shape[0]))
     testset = MyDataset(test_data, test_labels)
     testloader = DataLoader(testset, batch_size=1, shuffle=False) # batch size 1로 수정.
     predicted = evaluate(model, testloader)
     plt.figure()
-    plt.plot(predicted)
+    plt.plot(t,predicted,tsbp_true,1,'ro',tdbp_true,1,'go') # 가로축에 t 추가하기!
     plt.ylabel('predicted probability')
     ############ SBP, DBP Estimation
-    t = test_time
+    
     N = len(t)-1
     MSEsbp_reci = []
     MSEdbp_reci = []
-    for n in range(5,N-4):
+    for n in range(5,N-3):
         # MSE for the SBP
-        tsbp = t[n]
+        tsbp    = t[n]
         tdbp = t[N]
         sum = 0
         for n1 in range(-5,4):
@@ -204,7 +207,7 @@ def test(index):
     MSEdbp_reci_plt = np.concatenate(([0,0,0,0,0],MSEdbp_reci,[0,0,0,0]))
 
     plt.figure()
-    plt.plot(MSEsbp_reci_plt,'r--',MSEdbp_reci_plt,'g--')
+    plt.plot(t,MSEsbp_reci_plt,'r--',t,MSEdbp_reci_plt,'g--',tsbp_true,1,'ro',tdbp_true,1,'go')
     plt.ylabel('1/MSE')
     plt.show()
     max_index = MSEsbp_reci.index(max(MSEsbp_reci))
