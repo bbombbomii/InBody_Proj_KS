@@ -157,9 +157,20 @@ def test(index):
     testset = MyDataset(test_data, test_labels)
     testloader = DataLoader(testset, batch_size=1, shuffle=False) # batch size 1로 수정.
     predicted = evaluate(model, testloader)
-    plt.figure()
-    plt.plot(t,predicted,tsbp_true,1,'ro',tdbp_true,1,'go') # 가로축에 t 추가하기!
-    plt.ylabel('predicted probability')
+
+    ## plot predicted probability and pressure
+    fig, ax1 = plt.subplots()
+    color = 'tab:red'
+    ax1.set_xlabel('time (s)')
+    ax1.set_ylabel('predicted probability', color=color)
+    ax1.plot(t, predicted, color,tsbp_true,1,'ro',tdbp_true,1,'go')
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    color = 'tab:blue'
+    ax2.set_ylabel('pressure', color=color)  # we already handled the x-label with ax1
+    # ax2.plot(t, test_pressure, color=color) #4번째 파일에서 dim이 74, 73으로 다름.
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
     ############ SBP, DBP Estimation
     
     N = len(t)-1
@@ -203,22 +214,25 @@ def test(index):
             sum = sum + (predicted[n+n1]-float(y))**2
         MSEdbp_reci.append(1/(sum/10))
     # zero padding (5 in front, 4 behind)
-    MSEsbp_reci_plt = np.concatenate(([0,0,0,0,0],MSEsbp_reci,[0,0,0,0]))
-    MSEdbp_reci_plt = np.concatenate(([0,0,0,0,0],MSEdbp_reci,[0,0,0,0]))
+    MSEsbp_reci = np.concatenate(([0,0,0,0,0],MSEsbp_reci,[0,0,0,0]))
+    MSEdbp_reci = np.concatenate(([0,0,0,0,0],MSEdbp_reci,[0,0,0,0]))
 
     plt.figure()
-    plt.plot(t,MSEsbp_reci_plt,'r--',t,MSEdbp_reci_plt,'g--',tsbp_true,1,'ro',tdbp_true,1,'go')
+    plt.plot(t,MSEsbp_reci,'r--',t,MSEdbp_reci,'g--',tsbp_true,1,'ro',tdbp_true,1,'go')
     plt.ylabel('1/MSE')
     plt.show()
-    max_index = MSEsbp_reci.index(max(MSEsbp_reci))
+    max_index = np.argmax(MSEsbp_reci)
     sbp_predicted = test_pressure[max_index]
     # tsbp_predicted = t[max_index]
-    max_index = MSEdbp_reci.index(max(MSEdbp_reci))
+    max_index = np.argmax(MSEdbp_reci)
     dbp_predicted = test_pressure[max_index]
     sbp_err = sbp_predicted - sbp_true
     dbp_err = dbp_predicted - dbp_true
-    
-    return sbp_err, dbp_err
+    print("sbp_predicted: ",sbp_predicted)
+    print("sbp_true: ",sbp_true)
+    print("dbp_predicted: ",dbp_predicted)
+    print("dbp_true: ",dbp_true)
+    return sbp_err, dbp_err # 여기에 fig을 return?
 
 test_indices = [21,10,50,24,34] # 09-14 PM 01:01
 sbp_mse = 0
