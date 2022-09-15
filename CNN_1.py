@@ -112,7 +112,7 @@ def evaluate(model, loader, device="cpu"):
     model.eval()
     total=0
     correct=0
-    predicted = []
+    pred = []
     with torch.no_grad():
         for data in loader:
             images, labels = data
@@ -122,13 +122,12 @@ def evaluate(model, loader, device="cpu"):
             # _, predicted = torch.max(outputs.data, 1) #dimension=1, 최대값의 class index를 return -> 0 return
             temp = np.reshape(outputs.data,(1))
             if temp.item() >= 1:
-                predicted.append(1) # predicted probability values that exceed 1 are replaced with 1.
+                pred.append(1) # predicted probability values that exceed 1 are replaced with 1.
+            elif temp.item() < 0:
+                pred.append(0)
             else:
-                predicted.append(temp.item())
-            total += labels.size(0)
-            correct += (temp == labels).sum().item()
-    acc = 100*correct/total
-    return predicted
+                pred.append(temp.item())
+    return pred
 
 
 cnn_model = CNN()
@@ -155,7 +154,9 @@ def test(index):
     testset = MyDataset(test_data, test_labels)
     testloader = DataLoader(testset, batch_size=1, shuffle=False) # batch size 1로 수정.
     predicted = evaluate(model, testloader)
-
+    plt.figure()
+    plt.plot(predicted)
+    plt.ylabel('predicted probability')
     ############ SBP, DBP Estimation
     t = test_time
     N = len(t)-1
@@ -198,15 +199,13 @@ def test(index):
                 y = 0
             sum = sum + (predicted[n+n1]-float(y))**2
         MSEdbp_reci.append(1/(sum/10))
+    # zero padding (5 in front, 4 behind)
+    MSEsbp_reci_plt = np.concatenate(([0,0,0,0,0],MSEsbp_reci,[0,0,0,0]))
+    MSEdbp_reci_plt = np.concatenate(([0,0,0,0,0],MSEdbp_reci,[0,0,0,0]))
+
     plt.figure()
-    plt.plot(predicted)
-    plt.ylabel('predicted')
-    plt.figure()
-    plt.plot(MSEsbp_reci)
-    plt.ylabel('MSEsbp_reci')
-    plt.figure()
-    plt.plot(MSEdbp_reci)
-    plt.ylabel('MSEdbp_reci')
+    plt.plot(MSEsbp_reci_plt,'r--',MSEdbp_reci_plt,'g--')
+    plt.ylabel('1/MSE')
     plt.show()
     max_index = MSEsbp_reci.index(max(MSEsbp_reci))
     sbp_predicted = test_pressure[max_index]
@@ -221,13 +220,19 @@ def test(index):
 test_indices = [21,10,50,24,34] # 09-14 PM 01:01
 sbp_mse = 0
 dbp_mse = 0
+sbp_mean = 0
+dbp_mean = 0
 for index in test_indices:
     sbp_err, dbp_err = test(index)
     print("sbp_err: ", sbp_err)
     print("dbp_err: ", dbp_err)
+    sbp_mean = sbp_mean + sbp_err
+    dbp_mean = dbp_mean + dbp_err
     sbp_mse = sbp_mse + sbp_err**2
     dbp_mse = dbp_mse + dbp_err**2
 sbp_mse = sbp_mse/len(test_indices)
 dbp_mse = dbp_mse/len(test_indices)
 print("sbp_rmse: ", math.sqrt(sbp_mse))
 print("dbp_rmse: ", math.sqrt(dbp_mse))
+print("sbp_mean: ", sbp_mean/len(test_indices))
+print("dbp_mean: ", dbp_mean/len(test_indices))
